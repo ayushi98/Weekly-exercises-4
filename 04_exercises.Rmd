@@ -107,10 +107,11 @@ world <- get_stamenmap(
 ggmap(world) + 
   geom_point(data = Starbucks, 
              aes(x = Longitude, y = Latitude, color = `Ownership Type`), 
-             alpha = .3, 
              size = .1) +
+  theme_map()+
+  theme(legend.background = element_blank())+
+  labs(title = "Starbucks locations around the world by ownership type")
   
-  theme_map()
 ```
   
 From this map, we see that Joint Ventures outlets are owned mostly in South & East Asia, while a licensed or company owned location is prevalent in the Americas.
@@ -163,7 +164,7 @@ twin_cities <- get_stamenmap(
 ggmap(twin_cities)+
   geom_point(data = starbucks_us_state, 
              aes(x = Longitude, y = Latitude, color = "red"))+ 
-  annotate(geom = "text", x = -93.1874, y = 44.926, label = "Macalester College")+
+  annotate(geom = "text", x = -93.1874, y = 44.916, label = "Macalester College")+
   annotate(geom = "point", x = -93.1874, y = 44.9270, label = "Macalester College")+
   theme_map()+
   labs(title = "Starbucks locations in the twin cities area")+
@@ -228,22 +229,25 @@ From this map we see that the east coast has considerably more locations than th
   
 ```{r}
 ayushi_fav_places <- tibble(
-  place = c("Home", "Macalester College", "Target Center", 
-            "Groveland Tap", "Milkjam Creamery", "Grand Ole Creamery",
-            "Shish", "Bde Maka Ska", "Hidden Falls", "Andale Taqueria", "Mississippi River Blvd"),
-  long = c(-93.169384, -93.168953, -93.276138, 
-           -93.177868, -93.287807, -93.131912, 
-           -93.170647, -93.311125, -93.193041, -93.278789, -93.197105),
-  lat = c(44.933867, 44.938218, 44.979630,
-          44.934236, 44.952570, 44.939944, 
-          44.940144, 44.946084, 44.906385, 44.863619, 44.921730 ),
-  top_3 = c("True", "False", "True", 
-            "False", "False", "False", 
+  place = c("Macalester College","Shish", "Grand Ole Creamery", 
+            "Home", "Groveland Tap", "Target Center", 
+            "Milkjam Creamery", "Bde Maka Ska", "Mississippi River Blvd", 
+            "Hidden Falls", "Andale Taqueria"),
+  long = c(-93.168953,-93.170647, -93.131912, 
+           -93.169384, -93.177868, -93.276138, 
+           -93.287807,-93.311125, -93.197105, 
+           -93.193041, -93.278789),
+  lat = c(44.938218, 44.940144, 44.939944, 
+          44.933867,44.934236, 44.979630,
+          44.952570, 44.946084, 44.921730, 
+          44.906385, 44.863619),
+  top_3 = c("False", "False", "False", 
+            "True", "False", "True", 
             "False", "False", "False", "False", "True")
   ) 
 
 palette1<-
-colorFactor(palette = "viridis", domain = ayushi_fav_places$top_3 )
+colorFactor(palette = "plasma", domain = ayushi_fav_places$top_3 )
 leaflet(data = ayushi_fav_places) %>% 
   addProviderTiles(providers$Stamen.TonerLite) %>% 
   addCircles(lng = ~long, 
@@ -251,7 +255,9 @@ leaflet(data = ayushi_fav_places) %>%
              label = ~place,
              weight = 12,
              color = ~palette1(top_3),
-             opacity = 1)
+             opacity = 1) %>% 
+  addPolylines(lng = ~long, 
+               lat = ~lat)
 ```  
   
 ## Revisiting old datasets
@@ -302,9 +308,10 @@ Stations_new <-
   10. Only 14.4% of the trips in our data are carried out by casual users. Create a plot that shows which area(s) have stations with a much higher percentage of departures by casual users. What patterns do you notice? Also plot this on top of a map. I think it will be more clear what the patterns are.
   
 ```{r}
+stations_percent<-
 Stations_new %>% 
-  group_by(client, name) %>% 
-  mutate(casual_user = total_departures/n())
+  group_by(long, lat) %>% 
+  summarise(percent_casual = mean(client == "Casual"))
 
 district_of_columbia <- get_stamenmap(
     bbox = c(left = -77.3685, bottom = 38.7037, right = -76.6612, top = 39.0832), 
@@ -312,11 +319,11 @@ district_of_columbia <- get_stamenmap(
     zoom = 11)
 
   ggmap(district_of_columbia)+
-  geom_point(data = Stations_new, 
-             aes(x = long, y = lat, color = total_departures))+ 
+  geom_point(data = stations_percent, 
+             aes(x = long, y = lat, color = percent_casual))+ 
   theme_map()+
   theme(legend.background = element_blank())+
-  labs(title = "Departures from each station")
+  labs(title = "Departures per Station by casual users")
 ```
   
 ### COVID-19 data
@@ -326,13 +333,48 @@ The following exercises will use the COVID-19 data from the NYT.
   11. Create a map that colors the states by the most recent cumulative number of COVID-19 cases (remember, these data report cumulative numbers so you don't need to compute that). Describe what you see. What is the problem with this map?
 
 ```{r}
-
+covid19 %>%
+  mutate(states_lowercase = str_to_lower(state)) %>% 
+  group_by(states_lowercase) %>% 
+  summarise(cumulative_cases = max(cases)) %>% 
+  ggplot()+
+  geom_map(map = states_map,
+           aes(map_id = states_lowercase,
+               fill = cumulative_cases))+
+  expand_limits(x = states_map$long, y = states_map$lat) + 
+  theme_map()+
+  labs(title = "Cumulative cases in the US by state")
+  
 ```
   
+This map shows us the recent COVID cases by state, but the problem is that it depends on the population of the state, so for states with a larger population, there are more cases.
   
   12. Now add the population of each state to the dataset and color the states by most recent cumulative cases/10,000 people. See the code for doing this with the Starbucks data. You will need to make some modifications. 
-  
+
+```{r}
+covid19 %>%
+  mutate(state = str_to_lower(state)) %>% 
+  left_join(census_pop_est_2018, 
+            by = "state") %>% 
+  group_by(state, est_pop_2018) %>% 
+  summarise(cumulative_cases = max(cases)) %>% 
+  mutate(cases_per_10000 = (cumulative_cases/est_pop_2018)*10000) %>% 
+  ggplot()+
+  geom_map(map = states_map,
+           aes(map_id = state,
+               fill = cases_per_10000))+
+  expand_limits(x = states_map$long, y = states_map$lat) + 
+  theme_map()+
+  labs(title = "Cumulative cases in the US per 10,000 people")
+```
+This is a fairer representation of COVID cases in the US, since it is per 10,000 people. So now we can see that the southern states have more COVID cases than the northeast ones. 
+
   13. **CHALLENGE** Choose 4 dates spread over the time period of the data and create the same map as in exercise 12 for each of the dates. Display the four graphs together using faceting. What do you notice?
+  
+```{r}
+
+```
+
   
 ## Minneapolis police stops
 
@@ -340,18 +382,93 @@ These exercises use the datasets `MplsStops` and `MplsDemo` from the `carData` l
 
   14. Use the `MplsStops` dataset to find out how many stops there were for each neighborhood and the proportion of stops that were for a suspicious vehicle or person. Sort the results from most to least number of stops. Save this as a dataset called `mpls_suspicious` and display the table.  
   
+```{r}
+mpls_suspicious<-
+MplsStops %>% 
+  group_by(neighborhood) %>%
+  count(problem) %>%
+  mutate(prop_stops = n/sum(n)) %>%
+  filter(problem == "suspicious") %>% 
+  arrange(desc(n))
+
+print(mpls_suspicious)
+```
+  
+  
   15. Use a `leaflet` map and the `MplsStops` dataset to display each of the stops on a map as a small point. Color the points differently depending on whether they were for suspicious vehicle/person or a traffic stop (the `problem` variable). HINTS: use `addCircleMarkers`, set `stroke = FAlSE`, use `colorFactor()` to create a palette.  
+  
+```{r}
+palette_mpls<- colorFactor(palette = "viridis", domain = MplsStops$problem)
+
+leaflet(data = MplsStops) %>% 
+  addProviderTiles(providers$Stamen.TonerHybrid) %>% 
+  addCircles(lng = ~long, 
+             lat = ~lat, 
+             label = ~neighborhood,
+             weight = 12,
+             stroke = FALSE,
+             color = ~palette_mpls(problem),
+             opacity = 0.5) %>% 
+    addLegend(pal = palette_mpls,
+            values = ~problem, 
+            opacity = 0.5, 
+            title = NULL,
+            position = "bottomright") 
+
+```
+From this map we can see that there was a considerably higher number of suspicious stops in the South East neighborhoods of Minnepolis and more traffic stops in the central and northern neighborhoods.  
   
   16. Save the folder from moodle called Minneapolis_Neighborhoods into your project/repository folder for this assignment. Make sure the folder is called Minneapolis_Neighborhoods. Use the code below to read in the data and make sure to **delete the `eval=FALSE`**. Although it looks like it only links to the .sph file, you need the entire folder of files to create the `mpls_nbhd` data set. These data contain information about the geometries of the Minneapolis neighborhoods. Using the `mpls_nbhd` dataset as the base file, join the `mpls_suspicious` and `MplsDemo` datasets to it by neighborhood (careful, they are named different things in the different files). Call this new dataset `mpls_all`.
 
-```{r, eval=FALSE}
+```{r}
 mpls_nbhd <- st_read("Minneapolis_Neighborhoods/Minneapolis_Neighborhoods.shp", quiet = TRUE)
 ```
 
+
+```{r}
+mpls_all<-
+mpls_nbhd %>% 
+  st_as_sf(coords = c("long", "lat"), crs = "NAD27") %>% 
+  group_by(BDNAME) %>% 
+  summarise(geometry = st_combine(geometry)) %>% 
+  st_cast("POLYGON") %>% 
+  left_join(mpls_suspicious,
+            by = c("BDNAME" = "neighborhood")) %>% 
+  left_join(MplsDemo,
+            by = c("BDNAME" = "neighborhood"))
+```
+
   17. Use `leaflet` to create a map from the `mpls_all` data  that colors the neighborhoods by `prop_suspicious`. Display the neighborhood name as you scroll over it. Describe what you observe in the map.
+
+```{r}
+palette_mpls_all <- colorNumeric("Blues", domain = mpls_all$prop_stops)
+
+leaflet(mpls_all) %>% 
+  addProviderTiles(providers$Esri.WorldStreetMap) %>% 
+  addPolygons(label = ~BDNAME,
+              fillColor = ~palette_mpls_all(prop_stops),
+              stroke = FALSE,
+              fillOpacity = .8,
+              highlight = highlightOptions(color = "block",
+                                           fillOpacity = .9,
+                                           bringToFront = FALSE)) %>%
+  addLegend(pal = palette_mpls_all, 
+            values = ~prop_stops, 
+            opacity = 0.5, 
+            title = NULL,
+            position = "bottomleft") 
+```
+
+
+There were a higher proportion of suspicious stops in the south east neighborhoods of Minneapolis than in the north.   
   
   18. Use `leaflet` to create a map of your own choosing. Come up with a question you want to try to answer and use the map to help answer that question. Describe what your map shows. 
   
+  
+```{r}
+
+```
+
   
 ## GitHub link
 

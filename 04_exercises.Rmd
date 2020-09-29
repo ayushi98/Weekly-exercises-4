@@ -343,7 +343,9 @@ covid19 %>%
                fill = cumulative_cases))+
   expand_limits(x = states_map$long, y = states_map$lat) + 
   theme_map()+
-  labs(title = "Cumulative cases in the US by state")
+  labs(title = "Cumulative cases in the US by state") +
+  scale_fill_viridis_c()
+
   
 ```
   
@@ -365,16 +367,34 @@ covid19 %>%
                fill = cases_per_10000))+
   expand_limits(x = states_map$long, y = states_map$lat) + 
   theme_map()+
-  labs(title = "Cumulative cases in the US per 10,000 people")
+  labs(title = "Cumulative cases in the US per 10,000 people")+
+  scale_fill_viridis_c()
 ```
 This is a fairer representation of COVID cases in the US, since it is per 10,000 people. So now we can see that the southern states have more COVID cases than the northeast ones. 
 
   13. **CHALLENGE** Choose 4 dates spread over the time period of the data and create the same map as in exercise 12 for each of the dates. Display the four graphs together using faceting. What do you notice?
   
 ```{r}
-
+covid19 %>% 
+  filter(date %in% ymd(c("2020-03-21", "2020-05-21", "2020-07-14", "2020-09-16"))) %>% 
+  mutate(state = str_to_lower(state)) %>% 
+  left_join(census_pop_est_2018, 
+            by = "state") %>% 
+  group_by(state, est_pop_2018, date) %>% 
+  summarise(cumulative_cases = max(cases)) %>% 
+  mutate(cases_per_10000 = (cumulative_cases/est_pop_2018)*10000) %>% 
+  ggplot()+
+  geom_map(map = states_map,
+           aes(map_id = state,
+               fill = cases_per_10000))+
+  expand_limits(x = states_map$long, y = states_map$lat) + 
+  facet_wrap(~date)+
+  theme_map()+
+  scale_fill_viridis_c()+
+  labs(title = "COVID-19 cases in the US over time per 10,000 people")
+  
 ```
-
+From this graph, we can see a gradual increase in COVID cases in the US. In May, New York was facing the worst outbreak and that is depicted, while in March the US barely had any cases.
   
 ## Minneapolis police stops
 
@@ -441,7 +461,7 @@ mpls_nbhd %>%
   17. Use `leaflet` to create a map from the `mpls_all` data  that colors the neighborhoods by `prop_suspicious`. Display the neighborhood name as you scroll over it. Describe what you observe in the map.
 
 ```{r}
-palette_mpls_all <- colorNumeric("Blues", domain = mpls_all$prop_stops)
+palette_mpls_all <- colorNumeric("inferno", domain = mpls_all$prop_stops)
 
 leaflet(mpls_all) %>% 
   addProviderTiles(providers$Esri.WorldStreetMap) %>% 
@@ -458,16 +478,42 @@ leaflet(mpls_all) %>%
             title = NULL,
             position = "bottomleft") 
 ```
-
-
-There were a higher proportion of suspicious stops in the south east neighborhoods of Minneapolis than in the north.   
+There are a higher proportion of suspicious stops in the south east neighborhoods of Minneapolis than in the north.   
   
   18. Use `leaflet` to create a map of your own choosing. Come up with a question you want to try to answer and use the map to help answer that question. Describe what your map shows. 
   
-  
+
+What is the distribution of suspicious stops and the fraction of the African American population in the neighborhoods? Is there a correlation between the number of suspicious stops and black neighborhoods?  
 ```{r}
+palette_mpls_all2 <- colorNumeric("plasma", domain = mpls_all$black)
+
+leaflet(mpls_all) %>% 
+  addProviderTiles(providers$Esri.WorldStreetMap) %>% 
+  addPolygons(label = ~BDNAME,
+              fillColor = ~palette_mpls_all2(black),
+              stroke = FALSE,
+              fillOpacity = .8,
+              highlight = highlightOptions(color = "block",
+                                           fillOpacity = .7,
+                                           bringToFront = FALSE)) %>%
+addCircles(data = MplsStops %>% filter(problem == "suspicious"),
+           lng = ~long, 
+           lat = ~lat, 
+           label = ~neighborhood,
+           weight = 10,
+           stroke = FALSE,
+           color = "black",
+           opacity = 0.5) %>% 
+           
+  addLegend(pal = palette_mpls_all2, 
+            values = ~black, 
+            opacity = 0.5, 
+            title = "Fraction of black population",
+            position = "bottomleft")
+  
 
 ```
+From this map we can see that in areas where there is a greater fraction of African American population, there are also a greater number of suspicious stops (central areas and northwest areas). While in the purple areas (lesser fraction of the black population) there are significantly fewer suspicious stops. 
 
   
 ## GitHub link

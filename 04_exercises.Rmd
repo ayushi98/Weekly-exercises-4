@@ -12,7 +12,7 @@ output:
 
 
 ```{r setup, include=FALSE}
-#knitr::opts_chunk$set(echo = TRUE, error=TRUE, message=FALSE, warning=FALSE)
+knitr::opts_chunk$set(echo = TRUE, error=TRUE, message=FALSE, warning=FALSE)
 ```
 
 ```{r libraries}
@@ -106,15 +106,15 @@ world <- get_stamenmap(
 
 ggmap(world) + 
   geom_point(data = Starbucks, 
-             aes(x = Longitude, y = Latitude, color = `Ownership Type`), 
-             size = .1) +
+             aes(x = Longitude, y = Latitude, color = `Ownership Type`),
+             size = .3)+
   theme_map()+
   theme(legend.background = element_blank())+
   labs(title = "Starbucks locations around the world by ownership type")
   
 ```
   
-From this map, we see that Joint Ventures outlets are owned mostly in South & East Asia, while a licensed or company owned location is prevalent in the Americas.
+From this map, we see that Joint Ventures outlets are owned mostly in South & East Asia. There are not any franchised owned locations in the Americas or Asia. In North America, we see a majority of Licensed and Company owned locations.
 
   2. Construct a new map of Starbucks locations in the Twin Cities metro area (approximately the 5 county metro area).  
   
@@ -125,7 +125,7 @@ twin_cities <- get_stamenmap(
     zoom = 10)
 
 ggmap(twin_cities)+
-  geom_point(data = starbucks_us_state, 
+  geom_point(data = Starbucks %>% filter(Country == "US"), 
              aes(x = Longitude, y = Latitude, color = "red"))+ 
   theme_map()+
   labs(title = "Starbucks locations in the twin cities area")+
@@ -134,7 +134,7 @@ ggmap(twin_cities)+
 
   3. In the Twin Cities plot, play with the zoom number. What does it do?  (just describe what it does - don't actually include more than one map).  
 
-When the zoom is a larger number, it zooms out the map, so we see a larger area being covered. But when it is smaller it zooms into the map.
+When the zoom is a larger number, it zooms in the map, so we see a smaller area being covered. When the zoom is a smaller number, the map is zoomed out and a larger area is covered.
 
   4. Try a couple different map types (see `get_stamenmap()` in help and look at `maptype`). Include a map with one of the other map types.  
 
@@ -145,7 +145,7 @@ twin_cities <- get_stamenmap(
     zoom = 10)
 
 ggmap(twin_cities)+
-  geom_point(data = starbucks_us_state, 
+  geom_point(data = Starbucks %>% filter(Country == "US"), 
              aes(x = Longitude, y = Latitude, color = "red"))+ 
   theme_map()+
   labs(title = "Starbucks locations in the twin cities area")+
@@ -162,7 +162,7 @@ twin_cities <- get_stamenmap(
     zoom = 10)
 
 ggmap(twin_cities)+
-  geom_point(data = starbucks_us_state, 
+  geom_point(data = Starbucks %>% filter(Country == "US"), 
              aes(x = Longitude, y = Latitude, color = "red"))+ 
   annotate(geom = "text", x = -93.1874, y = 44.916, label = "Macalester College")+
   annotate(geom = "point", x = -93.1874, y = 44.9270, label = "Macalester College")+
@@ -325,7 +325,9 @@ district_of_columbia <- get_stamenmap(
   theme(legend.background = element_blank())+
   labs(title = "Departures per Station by casual users")
 ```
-  
+
+Through this visualization, there is a higher percentage of casual users in the central DC area than in the sorrounding areas. 
+
 ### COVID-19 data
 
 The following exercises will use the COVID-19 data from the NYT.
@@ -370,6 +372,8 @@ covid19 %>%
   labs(title = "Cumulative cases in the US per 10,000 people")+
   scale_fill_viridis_c()
 ```
+
+
 This is a fairer representation of COVID cases in the US, since it is per 10,000 people. So now we can see that the southern states have more COVID cases than the northeast ones. 
 
   13. **CHALLENGE** Choose 4 dates spread over the time period of the data and create the same map as in exercise 12 for each of the dates. Display the four graphs together using faceting. What do you notice?
@@ -394,6 +398,8 @@ covid19 %>%
   labs(title = "COVID-19 cases in the US over time per 10,000 people")
   
 ```
+
+
 From this graph, we can see a gradual increase in COVID cases in the US. In May, New York was facing the worst outbreak and that is depicted, while in March the US barely had any cases.
   
 ## Minneapolis police stops
@@ -422,18 +428,18 @@ palette_mpls<- colorFactor(palette = "viridis", domain = MplsStops$problem)
 
 leaflet(data = MplsStops) %>% 
   addProviderTiles(providers$Stamen.TonerHybrid) %>% 
-  addCircles(lng = ~long, 
-             lat = ~lat, 
-             label = ~neighborhood,
-             weight = 12,
-             stroke = FALSE,
-             color = ~palette_mpls(problem),
-             opacity = 0.5) %>% 
+  addCircleMarkers(lng = ~long, 
+                   lat = ~lat, 
+                   label = ~neighborhood,
+                   stroke = FALSE,
+                   color = ~palette_mpls(problem),
+                   opacity = 0.5,
+                   radius = 2) %>% 
     addLegend(pal = palette_mpls,
-            values = ~problem, 
-            opacity = 0.5, 
-            title = NULL,
-            position = "bottomright") 
+              values = ~problem, 
+              opacity = 0.5, 
+              title = NULL,
+              position = "bottomright") 
 
 ```
 From this map we can see that there was a considerably higher number of suspicious stops in the South East neighborhoods of Minnepolis and more traffic stops in the central and northern neighborhoods.  
@@ -478,6 +484,7 @@ leaflet(mpls_all) %>%
             title = NULL,
             position = "bottomleft") 
 ```
+
 There are a higher proportion of suspicious stops in the south east neighborhoods of Minneapolis than in the north.   
   
   18. Use `leaflet` to create a map of your own choosing. Come up with a question you want to try to answer and use the map to help answer that question. Describe what your map shows. 
@@ -513,6 +520,7 @@ addCircles(data = MplsStops %>% filter(problem == "suspicious"),
   
 
 ```
+
 From this map we can see that in areas where there is a greater fraction of African American population, there are also a greater number of suspicious stops (central areas and northwest areas). While in the purple areas (lesser fraction of the black population) there are significantly fewer suspicious stops. 
 
   
